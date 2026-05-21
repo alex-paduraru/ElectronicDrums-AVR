@@ -18,6 +18,31 @@
 
 
 
+// MIDI Notes
+#define KICK_NOTE        36
+#define SNARE_NOTE       38
+#define HH_CLOSED_NOTE   42
+#define HH_PEDAL_NOTE    44
+#define TOM_NOTE         45
+#define HH_OPEN_NOTE     46
+#define CRASH_LEFT_NOTE  49
+#define RIDE_NOTE        51
+#define CRASH_RIGHT_NOTE 57
+
+// ADC Channels
+#define KICK_CHANNEL        0
+#define SNARE_CHANNEL       3
+#define HH_CLOSED_CHANNEL   2
+#define HH_PEDAL_CHANNEL    1
+#define TOM_CHANNEL         4
+#define HH_OPEN_CHANNEL     2
+#define CRASH_LEFT_CHANNEL  5
+#define RIDE_CHANNEL        6
+#define CRASH_RIGHT_CHANNEL 6
+
+
+
+
 // TM1637 - 7 segments display
 TM1637Display display(DISPLAY_CLK, DISPLAY_DIO);
 
@@ -48,6 +73,12 @@ const uint16_t BPM_REPEAT_MS = 50;          // Repeat interval for holding BPM U
 const uint16_t BPM_REPEAT_START_MS = 1000;  // Hold duration for start of fast BPM UP/DOWN
 
 
+// 
+const uint8_t PADS_NR = 7;                  // Number of pads
+uint32_t lastHitTime[PADS_NR];              // Timestamp of the last hit
+
+
+
 
 
 // Metronome Intrerrupt Routine
@@ -61,6 +92,8 @@ ISR(TIMER1_COMPA_vect) {
         metronomeTick = true;
     }
 }
+
+
 
 
 
@@ -79,10 +112,51 @@ void updateMetronomeTimer() {
 
     // Set new timer compare value
     OCR1A = (uint16_t)compareValue;
-    
+
     // Enable intrerrupts and restore registers
     SREG = oldSREG;
 }
+
+
+
+
+
+// Reads the input of an ADC channel and creates a MIDI signal accordingly
+void processPad(uint8_t channel, uint8_t note, uint16_t threshold, uint16_t cap, uint32_t cooldown) {
+    
+    // Select ADC
+    ADMUX = (ADMUX & 0xF0) | channel;
+    // Start conversion
+    ADCSRA |= (1 << ADSC);
+    // Wait for conversion
+    while (ADCSRA & (1 << ADSC));
+
+    uint16_t adcValue = ADC;
+
+    uint32_t now = millis();
+
+    // Hit detection
+    if ((adcValue > threshold) && ((now - lastHitTime[channel]) > cooldown)) {
+        lastHitTime[channel] = now;
+
+        // Calculate velocity
+        if (adcValue > cap)
+            adcValue = cap;
+
+        uint8_t velocity = ((adcValue - threshold) * 127UL) / (cap - threshold);
+
+        if (velocity > 127)
+            velocity = 127;
+
+        // Send MIDI signal
+        Serial.write(0x90);
+        Serial.write(note);
+        Serial.write(velocity);
+    }
+
+}
+
+
 
 
 
@@ -145,7 +219,49 @@ void setup() {
 
     // Enable global intrerrupts
     sei();
+
+
+
+    // ===== UART AND ADC =====
+
+    // Start serial communication
+    Serial.begin(57600);
+
+    // Inputs
+    DDRC &= ~(1 << PC0);
+    DDRC &= ~(1 << PC1);
+    DDRC &= ~(1 << PC2);
+    DDRC &= ~(1 << PC3);
+    DDRC &= ~(1 << PC4);
+    DDRC &= ~(1 << PC5);
+
+    // Disable internal pull-ups
+    PORTC &= ~(1 << PC0);
+    PORTC &= ~(1 << PC1);
+    PORTC &= ~(1 << PC2);
+    PORTC &= ~(1 << PC3);
+    PORTC &= ~(1 << PC4);
+    PORTC &= ~(1 << PC5);
+
+    // AVcc reference, ADC0 initially selected
+    ADMUX = (1 << REFS0);
+
+    // ADC enable
+    ADCSRA |= (1 << ADEN);
+
+    // Prescaler 128
+    ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+
+    // Disable digital input
+    DIDR0 |= (1 << ADC0D);
+    DIDR0 |= (1 << ADC1D);
+    DIDR0 |= (1 << ADC2D);
+    DIDR0 |= (1 << ADC3D);
+    DIDR0 |= (1 << ADC4D);
+    DIDR0 |= (1 << ADC5D);
 }
+
+
 
 
 
@@ -275,4 +391,34 @@ void loop() {
 
 
     // ===== PIEZO READING =====
+
+    processPad(KICK_CHANNEL, KICK_NOTE, 30, 1000, 50);
+    processPad(SNARE_CHANNEL, SNARE_NOTE, 30, 1000, 50);
+    processPad(TOM_CHANNEL, TOM_NOTE, 30, 1000, 50);
+    processPad(CRASH_LEFT_CHANNEL, CRASH_LEFT_NOTE, 30, 1000, 50);
+
+    switch (kitPreset) {
+        case 1:
+            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 1000, 50);
+            processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 30, 1000, 50);
+        break;
+
+        case 2:
+            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 1000, 50);
+            processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 30, 1000, 50);
+        break;
+
+        case 3:
+            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 1000, 50);
+            processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 30, 1000, 50);
+        break;
+
+        case 4:
+            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 1000, 50);
+            processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 30, 1000, 50);
+        break;
+
+        default:
+        break;
+    }
 }
