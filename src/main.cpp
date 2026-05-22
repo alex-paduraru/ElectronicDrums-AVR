@@ -32,10 +32,9 @@
 // ADC Channels
 #define KICK_CHANNEL        0
 #define SNARE_CHANNEL       3
-#define HH_CLOSED_CHANNEL   2
+#define HH_CHANNEL   2
 #define HH_PEDAL_CHANNEL    1
 #define TOM_CHANNEL         4
-#define HH_OPEN_CHANNEL     2
 #define CRASH_LEFT_CHANNEL  5
 #define RIDE_CHANNEL        6
 #define CRASH_RIGHT_CHANNEL 6
@@ -73,9 +72,10 @@ const uint16_t BPM_REPEAT_MS = 50;          // Repeat interval for holding BPM U
 const uint16_t BPM_REPEAT_START_MS = 1000;  // Hold duration for start of fast BPM UP/DOWN
 
 
-// 
+// Drums logic variables
 const uint8_t PADS_NR = 7;                  // Number of pads
 uint32_t lastHitTime[PADS_NR];              // Timestamp of the last hit
+bool hhClosed = false;                      // State of the hi-hat -> true is closed, false is opened
 
 
 
@@ -148,12 +148,17 @@ void processPad(uint8_t channel, uint8_t note, uint16_t threshold, uint16_t cap,
         if (velocity > 127)
             velocity = 127;
 
+        // Hi-hat open/close
+        if ((channel == HH_PEDAL_CHANNEL) && ((kitPreset == 1) || (kitPreset == 2))) {
+            hhClosed = !hhClosed;
+            return;
+        }
+
         // Send MIDI signal
         Serial.write(0x90);
         Serial.write(note);
         Serial.write(velocity);
     }
-
 }
 
 
@@ -392,30 +397,35 @@ void loop() {
 
     // ===== PIEZO READING =====
 
-    processPad(KICK_CHANNEL, KICK_NOTE, 30, 1000, 50);
-    processPad(SNARE_CHANNEL, SNARE_NOTE, 30, 1000, 50);
-    processPad(TOM_CHANNEL, TOM_NOTE, 30, 1000, 50);
-    processPad(CRASH_LEFT_CHANNEL, CRASH_LEFT_NOTE, 30, 1000, 50);
+    processPad(KICK_CHANNEL, KICK_NOTE, 800, 800, 50);
+    processPad(SNARE_CHANNEL, SNARE_NOTE, 30, 250, 50);
+    processPad(TOM_CHANNEL, TOM_NOTE, 50, 300, 50);
+    processPad(CRASH_LEFT_CHANNEL, CRASH_LEFT_NOTE, 30, 250, 50);
+
+    if (hhClosed)
+        processPad(HH_CHANNEL, HH_CLOSED_NOTE, 30, 300, 50);
+    else 
+        processPad(HH_CHANNEL, HH_OPEN_NOTE, 30, 300, 50);
 
     switch (kitPreset) {
         case 1:
-            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 1000, 50);
-            processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 30, 1000, 50);
+            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 250, 50);
+            processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 700, 700, 50);
         break;
 
         case 2:
-            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 1000, 50);
-            processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 30, 1000, 50);
+            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 250, 50);
+            processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 700, 700, 50);
         break;
 
         case 3:
-            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 1000, 50);
-            processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 30, 1000, 50);
+            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 250, 50);
+            processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 800, 800, 50);
         break;
 
         case 4:
-            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 1000, 50);
-            processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 30, 1000, 50);
+            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 250, 50);
+            processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 750, 750, 50);
         break;
 
         default:
