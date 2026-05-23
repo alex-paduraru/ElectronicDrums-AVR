@@ -310,6 +310,9 @@ void loop() {
             kitPreset++;
             kitPreset = kitPreset > PRESETS_NR ? 1 : kitPreset;
 
+            if (kitPreset == 3 || kitPreset == 4)
+                hhClosed = false;
+
             // Blink LED depending on preset
             for (int i = 0; i < kitPreset; i++) {
                 PORTB |= (1 << LED_CHANGE_PRESET);
@@ -398,33 +401,33 @@ void loop() {
     // ===== PIEZO READING =====
 
     processPad(KICK_CHANNEL, KICK_NOTE, 800, 800, 50);
-    processPad(SNARE_CHANNEL, SNARE_NOTE, 30, 250, 50);
-    processPad(TOM_CHANNEL, TOM_NOTE, 50, 300, 50);
-    processPad(CRASH_LEFT_CHANNEL, CRASH_LEFT_NOTE, 30, 250, 50);
+    processPad(SNARE_CHANNEL, SNARE_NOTE, 50, 400, 50);
+    processPad(TOM_CHANNEL, TOM_NOTE, 50, 300, 100);
+    processPad(CRASH_LEFT_CHANNEL, CRASH_LEFT_NOTE, 50, 250, 50);
 
     if (hhClosed)
-        processPad(HH_CHANNEL, HH_CLOSED_NOTE, 30, 300, 50);
+        processPad(HH_CHANNEL, HH_CLOSED_NOTE, 50, 250, 100);
     else 
-        processPad(HH_CHANNEL, HH_OPEN_NOTE, 30, 300, 50);
+        processPad(HH_CHANNEL, HH_OPEN_NOTE, 50, 250, 100);
 
     switch (kitPreset) {
         case 1:
-            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 250, 50);
+            processPad(RIDE_CHANNEL, RIDE_NOTE, 50, 200, 50);
             processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 700, 700, 50);
         break;
 
         case 2:
-            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 250, 50);
+            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 50, 250, 50);
             processPad(HH_PEDAL_CHANNEL, HH_PEDAL_NOTE, 700, 700, 50);
         break;
 
         case 3:
-            processPad(RIDE_CHANNEL, RIDE_NOTE, 30, 250, 50);
+            processPad(RIDE_CHANNEL, RIDE_NOTE, 50, 250, 50);
             processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 800, 800, 50);
         break;
 
         case 4:
-            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 30, 250, 50);
+            processPad(CRASH_RIGHT_CHANNEL, CRASH_RIGHT_NOTE, 50, 250, 50);
             processPad(HH_PEDAL_CHANNEL, KICK_NOTE, 750, 750, 50);
         break;
 
