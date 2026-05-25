@@ -402,7 +402,7 @@ void loop() {
 
     processPad(KICK_CHANNEL, KICK_NOTE, 800, 800, 50);
     processPad(SNARE_CHANNEL, SNARE_NOTE, 50, 400, 50);
-    processPad(TOM_CHANNEL, TOM_NOTE, 50, 300, 100);
+    processPad(TOM_CHANNEL, TOM_NOTE, 500, 900, 100);
     processPad(CRASH_LEFT_CHANNEL, CRASH_LEFT_NOTE, 50, 250, 50);
 
     if (hhClosed)
